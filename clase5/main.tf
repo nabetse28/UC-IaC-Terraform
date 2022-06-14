@@ -1,3 +1,9 @@
+
+variable "private_ssh_key" {}
+variable "public_ssh_key" {}
+variable "vpc_id" {}
+variable "resource" {}
+
 provider "aws" {
   region = "us-east-1"
 }
@@ -18,21 +24,18 @@ data "aws_ami" "amazon_linux" {
   owners = ["137112412989"]
 }
 
-variable "ssh_key" {}
-variable "vpc_id" {}
-
 resource "aws_key_pair" "deployer" {
   key_name   = "deployer-key"
-  public_key = file(var.ssh_key)
+  public_key = file(var.public_ssh_key)
 
   tags = {
-    "Resources" = "Test"
+    "Resources" = "Test-${var.resource}"
   }
 }
 
-resource "aws_security_group" "allow_ssh" {
-  name        = "TerraformSSH"
-  description = "Allow SSH inbound traffic"
+resource "aws_security_group" "allow_ssh_and_http" {
+  name        = "TerraformSG_SSH_and_HTTP"
+  description = "Allow SSH and HTTP inbound traffic"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -59,29 +62,38 @@ resource "aws_security_group" "allow_ssh" {
   }
 
   tags = {
-    "Resources" = "Test"
+    "Resources" = "Test-${var.resource}"
   }
 }
 
-resource "aws_instance" "server" {
+resource "aws_instance" "server_http" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t2.micro"
   key_name      = aws_key_pair.deployer.key_name
-  # get_user_data = true
   vpc_security_group_ids = [
-    aws_security_group.allow_ssh.id
+    aws_security_group.allow_ssh_and_http.id
   ]
   tags = {
-    "Resources" = "Test"
+    "Resources" = "Test-${var.resource}"
+  }
+
+  connection {
+    type        = "ssh"
+    host        = self.public_ip
+    private_key = file(var.private_ssh_key)
   }
 
   user_data_base64 = "IyEvYmluL2Jhc2gKIyBVc2UgdGhpcyBmb3IgeW91ciB1c2VyIGRhdGEgKHNjcmlwdCBmcm9tIHRvcCB0byBib3R0b20pCiMgaW5zdGFsbCBodHRwZCAoTGludXggMiB2ZXJzaW9uKQp5dW0gdXBkYXRlIC15Cnl1bSBpbnN0YWxsIC15IGh0dHBkCnN5c3RlbWN0bCBzdGFydCBodHRwZApzeXN0ZW1jdGwgZW5hYmxlIGh0dHBkCmVjaG8gIjxoMT5IZWxsbyBXb3JsZCBmcm9tICQoaG9zdG5hbWUgLWYpPGgxPiIgPiAvdmFyL3d3dy9odG1sL2luZGV4Lmh0bWw="
 }
 
 output "ip_instance" {
-  value = aws_instance.server.public_ip
+  value = aws_instance.server_http.public_ip
 }
 
 output "ssh" {
-  value = "ssh -l amazon_linux ${aws_instance.server.public_ip}"
+  value = "ssh -i ${var.private_ssh_key} ec2-user@${aws_instance.server_http.public_dns}"
+}
+
+output "http" {
+  value = "http://${aws_instance.server_http.public_ip}"
 }
