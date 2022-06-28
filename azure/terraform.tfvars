@@ -1,0 +1,6 @@
+subscription_id = ""
+client_id       = ""
+client_secret   = ""
+tenant_id       = ""
+private_ssh_key = ""
+public_ssh_key  = ""
