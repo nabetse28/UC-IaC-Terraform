@@ -1,7 +1,10 @@
+variable "private_ssh_key" {}
+variable "public_ssh_key" {}
+
 # Create a resource group that will contain all the resources (vm, vnet, subnet, etc)
 resource "azurerm_resource_group" "az_rg" {
   name     = "terraform-rg"
-  location = "West US"
+  location = "West US 3"
 }
 
 # Create virtual network
@@ -36,7 +39,7 @@ resource "azurerm_network_security_group" "az_net_sg" {
 
   security_rule {
     name                       = "SSH"
-    priority                   = 1001
+    priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -47,7 +50,7 @@ resource "azurerm_network_security_group" "az_net_sg" {
   }
   security_rule {
     name                       = "HTTP"
-    priority                   = 1001
+    priority                   = 101
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -58,7 +61,7 @@ resource "azurerm_network_security_group" "az_net_sg" {
   }
   security_rule {
     name                       = "HTTP_ACCESS"
-    priority                   = 100
+    priority                   = 102
     direction                  = "Outbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -95,7 +98,7 @@ resource "azurerm_linux_virtual_machine" "az_vm" {
   location              = azurerm_resource_group.az_rg.location
   resource_group_name   = azurerm_resource_group.az_rg.name
   network_interface_ids = [azurerm_network_interface.az_netint.id]
-  size                  = "Standard_F2"
+  size                  = "Standard_B1s"
 
   os_disk {
     name                 = "myOsDisk"
@@ -116,9 +119,8 @@ resource "azurerm_linux_virtual_machine" "az_vm" {
 
   admin_ssh_key {
     username   = "azureuser"
-    public_key = tls_private_key.example_ssh.public_key_openssh
+    public_key = file(var.public_ssh_key)
   }
 
-  user_data = "IyEvYmluL2Jhc2gKIyBVc2UgdGhpcyBmb3IgeW91ciB1c2VyIGRhdGEgKHNjcmlwdCBmcm9tIHRvcCB0byBib3R0b20pCiMgaW5zdGFsbCBodHRwZCAoTGludXggMiB2ZXJzaW9uKQp5dW0gdXBkYXRlIC15Cnl1bSBpbnN0YWxsIC15IGh0dHBkCnN5c3RlbWN0bCBzdGFydCBodHRwZApzeXN0ZW1jdGwgZW5hYmxlIGh0dHBkCmVjaG8gIjxoMT5IZWxsbyBXb3JsZCBmcm9tICQoaG9zdG5hbWUgLWYpPGgxPiIgPiAvdmFyL3d3dy9odG1sL2luZGV4Lmh0bWw="
-
+  user_data = "IyEvdXNyL2Jpbi9lbnYgYmFzaCAKYXB0LWdldCB1cGRhdGUgLXkgCmFwdC1nZXQgaW5zdGFsbCAteSBhcGFjaGUyIApzeXN0ZW1jdGwgc3RhcnQgYXBhY2hlMi5zZXJ2aWNlIApzeXN0ZW1jdGwgZW5hYmxlIGFwYWNoZTIuc2VydmljZSAKZWNobyAiPGgxPkhlbGxvIFdvcmxkIGZyb20gJChob3N0bmFtZSAtZik8aDE+IiA+IC92YXIvd3d3L2h0bWwvaW5kZXguaHRtbAo="
 }
